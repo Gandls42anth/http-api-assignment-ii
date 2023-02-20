@@ -5,6 +5,113 @@
   <link rel="stylesheet" type="text/css" href="/style.css">
   
   <script>
+    const init = () => {
+      const nameForm = document.querySelector('#nameForm');
+      const userForm = document.querySelector("#userForm");
+      
+      //Create an addUser function that cancels the forms default action and
+      //calls our sendPost function above.
+      const addUser = (e) => {
+        e.preventDefault();
+        postRequest(nameForm);
+        return false;
+      }
+
+      const requestUPP = (e) => {
+        e.preventDefault();
+        requestUpdate(userForm);
+        return false;
+      }
+
+
+      document.querySelector("#userForm").addEventListener('submit', requestUPP);
+      document.querySelector("#nameForm").addEventListener('submit', addUser);
+
+    };
+    window.onload = init;
+
+    const handleResponse = async (response, head) => {
+      
+      //Grab the content section so that we can write to it
+      const content = document.querySelector('#content');
+      debugger;
+      //Based on the status of the response, write something.
+      switch(response.status) {
+        case 200: 
+          content.innerHTML = `<b>Success</b>`;
+          break;
+        case 201:
+          content.innerHTML = `<b>Created</b>`;
+          break;
+        case 204:
+          content.innerHTML = `<b>Updated (no content)</b>`;
+          break;
+        case 400: 
+          content.innerHTML = `<b>Bad Request</b>`;
+          break;
+        case 401: 
+          content.innerHTML = `<b>Unauthorized</b>`;
+          break;
+        case 403:
+          content.innerHTML = `<b>Forbidden</b>`;
+          break;
+        case 404:
+          content.innerHTML = `<b>Resource Not Found</b>`;
+          break;
+        case 500:
+          content.innerHTML = `<b>Internal Server Error</b>`;
+          break;
+        case 501:
+          content.innerHTML = `<b>Not Implemented</b>`;
+          break;
+        default: 
+          content.innerHTML = `Error code not implemented by client.`;
+          break;
+      }
+      debugger;
+      //If we should parse a response (meaning we made a get request)
+        //Parse the response to json. This is an async function, so we will await it.
+      
+      if(!head){
+        let obj = await response.json();
+        //To display the data easily, we will just stringify it again and display it.
+        let jsonString = JSON.stringify(obj);
+        content.innerHTML += `<p>${jsonString}</p>`;
+        debugger;
+      };
+      
+    };
+    const requestUpdate = async (userForm) => {
+      console.log("Requested an update");
+      //Grab the url and method from the html form below
+      const url = document.querySelector('#urlField').value;
+      const method = document.querySelector('#methodSelect').value;
+
+      let response = await fetch(url, {
+        method: method,
+        headers: {
+            'Accept': 'application/json'
+        },
+      });
+      debugger;
+      //Await our fetch response. Go to the URL, use the right method, and attach the headers.
+      handleResponse(response, method === "head")
+    };
+
+    const postRequest = async (userForm) => {
+      debugger;
+      const form_data = new FormData(document.querySelector("#nameForm"));
+      const form_str = new URLSearchParams(form_data).toString();
+
+      let response = await fetch(`/addUser`, {
+        method: "post",
+        headers: {
+          'Accept': 'application/json'
+        },
+        body:form_str,
+      });
+      handleResponse(response,false);
+    };
 
   </script>
 </head>
@@ -18,6 +125,7 @@
       <input id="ageField" type="number" name="age" min="0" max="100" step="1"/>
       <input type="submit" value="Add User" />
     </form>
+
     <form id="userForm" action="/getUsers" method="get">
       <select id='urlField'>
         <option value='/getUsers'>/getUsers</option>
