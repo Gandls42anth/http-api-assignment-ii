@@ -5,36 +5,16 @@
   <link rel="stylesheet" type="text/css" href="/style.css">
   
   <script>
+
     const init = () => {
-      const nameForm = document.querySelector('#nameForm');
-      const userForm = document.querySelector("#userForm");
-      
-      //Create an addUser function that cancels the forms default action and
-      //calls our sendPost function above.
-      const addUser = (e) => {
-        e.preventDefault();
-        postRequest(nameForm);
-        return false;
-      }
-
-      const requestUPP = (e) => {
-        e.preventDefault();
-        requestUpdate(userForm);
-        return false;
-      }
-
-
-      document.querySelector("#userForm").addEventListener('submit', requestUPP);
-      document.querySelector("#nameForm").addEventListener('submit', addUser);
-
+      document.querySelector("#send").addEventListener('click',requestUpdate);
     };
     window.onload = init;
-
-    const handleResponse = async (response, head) => {
+     const handleResponse = async (response, type) => {
       
       //Grab the content section so that we can write to it
       const content = document.querySelector('#content');
-      debugger;
+
       //Based on the status of the response, write something.
       switch(response.status) {
         case 200: 
@@ -42,9 +22,6 @@
           break;
         case 201:
           content.innerHTML = `<b>Created</b>`;
-          break;
-        case 204:
-          content.innerHTML = `<b>Updated (no content)</b>`;
           break;
         case 400: 
           content.innerHTML = `<b>Bad Request</b>`;
@@ -68,75 +45,65 @@
           content.innerHTML = `Error code not implemented by client.`;
           break;
       }
-      debugger;
+
       //If we should parse a response (meaning we made a get request)
         //Parse the response to json. This is an async function, so we will await it.
-      
-      if(!head){
+        if(type === 'application/json'){
         let obj = await response.json();
         //To display the data easily, we will just stringify it again and display it.
         let jsonString = JSON.stringify(obj);
         content.innerHTML += `<p>${jsonString}</p>`;
-        debugger;
-      };
-      
+        }else if(type === 'text/xml'){
+          const p = document.createElement('p');
+          const wah = await response.text();
+          const parsedResponse = new window.DOMParser().parseFromString(wah, 'text/xml');
+          p.textContent = parsedResponse.querySelector('message').textContent;
+          content.appendChild(p);
+        }
     };
+
+    //function to send request. This is marked as async since we will use await.
     const requestUpdate = async (userForm) => {
-      console.log("Requested an update");
+      
       //Grab the url and method from the html form below
-      const url = document.querySelector('#urlField').value;
-      const method = document.querySelector('#methodSelect').value;
+      const url = document.querySelector('#page').value;
+      const method = document.querySelector('#type').value;
 
-      let response = await fetch(url, {
-        method: method,
-        headers: {
-            'Accept': 'application/json'
-        },
-      });
-      debugger;
       //Await our fetch response. Go to the URL, use the right method, and attach the headers.
-      handleResponse(response, method === "head")
-    };
-
-    const postRequest = async (userForm) => {
-      debugger;
-      const form_data = new FormData(document.querySelector("#nameForm"));
-      const form_str = new URLSearchParams(form_data).toString();
-
-      let response = await fetch(`/addUser`, {
-        method: "post",
+      let response = await fetch(url, {
+        method:"get",
         headers: {
-          'Accept': 'application/json'
+            'Accept': method
         },
-        body:form_str,
       });
-      handleResponse(response,false);
-    };
 
+      //Once we have our response, send it into handle response. The second parameter is a boolean
+      //that says if we should parse the response or not. We will get a response to parse on get
+      //requests so we can do an inline boolean check, which will return a true or false to pass in.
+      handleResponse(response,method);
+    };
+    
+
+  
   </script>
 </head>
 <body>
   <section id="top">
-    <h3>POST Status Code Tests</h3>
-    <form id="nameForm" action="/addUser" method="post">
-      <label for="name">Name: </label>
-      <input id="nameField" type="text" name="name" />
-      <label for="age">Age: </label>
-      <input id="ageField" type="number" name="age" min="0" max="100" step="1"/>
-      <input type="submit" value="Add User" />
-    </form>
-
-    <form id="userForm" action="/getUsers" method="get">
-      <select id='urlField'>
-        <option value='/getUsers'>/getUsers</option>
-        <option value='/notReal'>/notReal</option>
-      </select>
-      <select id="methodSelect">
-        <option value="get">GET</option>
-        <option value="head">HEAD</option>
-      </select>
-      <input type="submit" value="Get User" />
-    </form>
+    <h3>Status Code Tests</h3>
+    <select id="page">
+      <option value="/success">Success</option>
+      <option value="/badRequest">Bad Request</option>
+      <option value="/unauthorized">Unauthorized</option>
+      <option value="/forbidden">Forbidden</option>
+      <option value="/internal">Internal</option>
+      <option value="/notImplemented">Not Implemented</option>
+      <option value="/notFound">Not Found</option>
+    </select>
+    <select id="type">
+      <option value="application/json">JSON</option>
+      <option value="text/xml">XML</option>
+    </select>
+    <button id="send">Send</button>
   </section>
   <section id="content">
   </section>
